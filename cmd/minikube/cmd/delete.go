@@ -125,6 +125,12 @@ func deleteContainersAndVolumes(ctx context.Context, ociBin string) {
 	}
 
 	klog.Infof("deleting containers and volumes ...")
+	if ociBin == oci.Docker {
+		// fix minikube delete can quietly leave most data on the host on linux when the driver is docker #15222
+		if _, err := oci.CachedDaemonInfo(ociBin); err != nil {
+			exit.Message(reason.DrvNotHealthy, fmt.Sprintf("Found %s, but it's unhealthy.", ociBin))
+		}
+	}
 
 	delLabel := fmt.Sprintf("%s=%s", oci.CreatedByLabelKey, "true")
 	errs := oci.DeleteContainersByLabel(ociBin, delLabel)
@@ -294,7 +300,7 @@ func purgeMinikubeDirectory() {
 
 // DeleteProfiles deletes one or more profiles
 func DeleteProfiles(profiles []*config.Profile) []error {
-	klog.Infof("DeleteProfiles")
+	klog.Infof("Delete Profiles")
 	var errs []error
 	for _, profile := range profiles {
 		errs = append(errs, deleteProfileTimeout(profile)...)
